@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <title>Lallu Lal: Ultimate Edition</title>
+    <style>
+        body { 
+            margin: 0; padding: 0; height: 100vh;
+            background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), 
+                        url('https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1350&q=80');
+            background-size: cover; background-position: center;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #00ffcc; font-family: 'Segoe UI', Impact, sans-serif;
+            overflow: hidden;
+        }
+
+        .screen { text-align: center; display: none; z-index: 10; }
+        .active-screen { display: block; }
+        h1 { font-size: 3.5rem; text-shadow: 0 0 20px #00ffcc; margin-bottom: 20px; }
+        
+        .btn-box {
+            background: rgba(255,255,255,0.1); padding: 25px; margin: 15px;
+            border-radius: 20px; cursor: pointer; border: 3px solid #00ffcc;
+            transition: 0.3s; width: 280px; display: inline-block;
+        }
+        .btn-box:hover { transform: scale(1.1); background: #00ffcc; color: #000; }
+        .btn-box h3 { margin: 0; font-size: 2rem; }
+
+        .grid { 
+            display: grid; grid-template-columns: repeat(3, 105px); gap: 12px; 
+            background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 20px;
+            backdrop-filter: blur(15px); border: 2px solid rgba(0, 255, 204, 0.3);
+            margin: 20px auto;
+        }
+        .cell { 
+            width: 105px; height: 105px; background: rgba(0,0,0,0.7); 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 50px; cursor: pointer; border-radius: 12px; color: #ffcc00;
+        }
+
+        #popup {
+            display: none; position: fixed; top: 50%; left: 50%; 
+            transform: translate(-50%, -50%); width: 80%; max-width: 450px;
+            background: #000; border: 6px solid #ff4444;
+            border-radius: 30px; text-align: center; padding: 50px; box-shadow: 0 0 150px #ff4444; z-index: 100;
+        }
+        .btn-restart { margin-top: 30px; padding: 15px 40px; background: #ff4444; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 20px; font-weight: bold; }
+
+        /* YE RAHA NAYA WATERMARK STYLE */
+        .watermark {
+            position: fixed;
+            bottom: 15px;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(0, 255, 204, 0.4);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="main-menu" class="screen active-screen">
+        <h1>LALLU LAL GAME</h1>
+        <div class="btn-box" onclick="showDifficulty()"><h3>VS CPU</h3><p>Computer Se Panga</p></div>
+        <div class="btn-box" onclick="startPVP()"><h3>VS PLAYER</h3><p>Dost Se Muqabla</p></div>
+    </div>
+
+    <div id="diff-menu" class="screen">
+        <h1>LEVEL CHUNO</h1>
+        <div class="btn-box" onclick="startGame('easy')"><h3>MAKKHAN</h3></div>
+        <div class="btn-box" onclick="startGame('medium')"><h3>MEDIUM</h3></div>
+        <div class="btn-box" onclick="startGame('hard')"><h3>BHOKAL HARD</h3></div>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <h2 id="game-info"></h2>
+        <div class="grid" id="board"></div>
+        <p id="status"></p>
+    </div>
+
+    <div id="popup">
+        <h2 id="resMsg"></h2>
+        <button class="btn-restart" onclick="location.reload()">PHIR SE BHIDO!</button>
+    </div>
+
+    <div class="watermark">A LITTLE CREATION BY PEEYUSH MALIK</div>
+
+    <script>
+        let board = ["","","","","","","","",""];
+        let mode = ""; let difficulty = ""; let turn = "X"; let active = false;
+
+        function showDifficulty() { mode = "cpu"; document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen')); document.getElementById('diff-menu').classList.add('active-screen'); }
+        function startPVP() { mode = "pvp"; startGame(""); }
+        function startGame(diff) {
+            difficulty = diff;
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+            document.getElementById('game-screen').classList.add('active-screen');
+            document.getElementById('game-info').innerText = mode === "cpu" ? "Mode: CPU" : "Mode: Dost";
+            active = true; createBoard();
+        }
+
+        function bolna(t) { let s = new SpeechSynthesisUtterance(t); s.lang = 'hi-IN'; s.pitch = 0.5; window.speechSynthesis.speak(s); }
+
+        function createBoard() {
+            const bDiv = document.getElementById("board"); bDiv.innerHTML = "";
+            board.forEach((v, i) => {
+                let d = document.createElement("div"); d.className = "cell"; d.innerText = v;
+                d.onclick = () => handleMove(i); bDiv.appendChild(d);
+            });
+        }
+
+        function handleMove(i) {
+            if (board[i] === "" && active) {
+                board[i] = turn; createBoard();
+                if (checkWin(board, turn)) { end(mode==='pvp' ? turn+" Jeet Gaya!" : (turn==='X'?"Sada suhagan raho":"Kya player banega tu")); }
+                else if (!board.includes("")) { end("Khel Draw!"); }
+                else { if (mode === "cpu") { active = false; setTimeout(cpuMove, 500); } else { turn = turn === "X" ? "O" : "X"; } }
+            }
+        }
+
+        function cpuMove() {
+            let m = (difficulty === 'hard') ? getBestMove() : getRandomMove();
+            board[m] = "O"; createBoard();
+            if (checkWin(board, "O")) end("Kya player banega re tu");
+            else if (!board.includes("")) end("Khel Draw!");
+            else active = true;
+        }
+
+        function getRandomMove() { let e = board.map((v, i) => v === "" ? i : null).filter(v => v !== null); return e[Math.floor(Math.random() * e.length)]; }
+        function getBestMove() {
+            let bestScore = -Infinity; let move;
+            for (let i = 0; i < 9; i++) { if (board[i] === "") { board[i] = "O"; let score = minimax(board, 0, false); board[i] = ""; if (score > bestScore) { bestScore = score; move = i; } } }
+            return move;
+        }
+
+        function minimax(cb, d, isMax) {
+            if (checkWin(cb, "O")) return 10; if (checkWin(cb, "X")) return -10; if (!cb.includes("")) return 0;
+            if (isMax) { let bs = -Infinity; for (let i=0; i<9; i++) { if (cb[i]==="") { cb[i]="O"; let s = minimax(cb, d+1, false); cb[i]=""; bs = Math.max(s, bs); } } return bs; }
+            else { let bs = Infinity; for (let i=0; i<9; i++) { if (cb[i]==="") { cb[i]="X"; let s = minimax(cb, d+1, true); cb[i]=""; bs = Math.min(s, bs); } } return bs; }
+        }
+
+        function checkWin(b, p) { const w = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; return w.some(s => b[s[0]]===p && b[s[1]]===p && b[s[2]]===p); }
+        function end(m) { active = false; document.getElementById("resMsg").innerText = m; document.getElementById("popup").style.display = "block"; bolna(m); }
+    </script>
+</body>
+</html>
+	
